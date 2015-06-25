@@ -21,17 +21,18 @@
 
 #include <wx/docview.h>
 #include <wx/menu.h>
+#include <wx/intl.h>
 
 #include "Utility/DocManager.h"
 #include "View/CommandIds.h"
 #include "View/PreferencesFrame.h"
 
-#include <clocale>
-
 IMPLEMENT_APP(TrenchBroomApp)
 
 BEGIN_EVENT_TABLE(TrenchBroomApp, AbstractApp)
 END_EVENT_TABLE()
+
+static wxLocale locale;
 
 wxMenu* TrenchBroomApp::CreateViewMenu(const TrenchBroom::Preferences::MultiMenuSelector& selector, wxEvtHandler* eventHandler, bool mapViewFocused) {
 	wxMenu* viewMenu = AbstractApp::CreateViewMenu(selector, eventHandler, mapViewFocused);
@@ -49,7 +50,7 @@ wxMenu* TrenchBroomApp::CreateHelpMenu(const TrenchBroom::Preferences::MultiMenu
 
 bool TrenchBroomApp::OnInit() {
     // set the locale to US so that we can parse floats property
-    std::setlocale(LC_ALL, "us");
+    locale.Init(wxLANGUAGE_ENGLISH_US);
     
 	if (AbstractApp::OnInit()) {
 		SetExitOnFrameDelete(true);
