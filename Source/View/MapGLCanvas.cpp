@@ -312,7 +312,8 @@ namespace TrenchBroom {
             }
 
             SetFocus();
-			CaptureMouse();
+            if (!HasCapture())
+                CaptureMouse();
             m_inputController->mouseDown(event.GetX(), event.GetY(), Controller::MouseButtons::MBLeft);
         }
 
@@ -349,7 +350,8 @@ namespace TrenchBroom {
             }
 
             SetFocus();
-			CaptureMouse();
+            if (!HasCapture())
+                CaptureMouse();
             m_inputController->mouseDown(event.GetX(), event.GetY(), Controller::MouseButtons::MBRight);
         }
 
@@ -390,7 +392,8 @@ namespace TrenchBroom {
             }
 
             SetFocus();
-			CaptureMouse();
+            if (!HasCapture())
+                CaptureMouse();
             m_inputController->mouseDown(event.GetX(), event.GetY(), Controller::MouseButtons::MBMiddle);
         }
 
