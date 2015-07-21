@@ -146,6 +146,8 @@ namespace TrenchBroom {
         }
 
         MapGLCanvas::~MapGLCanvas() {
+            m_glContext->SetCurrent(*static_cast<const wxGLCanvas *>(this));
+            
 			if (GetCapture() == this)
 				ReleaseMouse();
 
