@@ -620,6 +620,12 @@ namespace TrenchBroom {
         }
 
         void EditorView::OnUpdate(wxView* sender, wxObject* hint) {
+            // OSX: sometimes OnUpdate runs during EditorView::OnCreate during
+            // the frame construction, before it is attached to this. Avoid a crash
+            // in that case.
+            if (GetFrame() == NULL)
+                return;
+
             if (hint != NULL) {
                 Controller::Command* command = static_cast<Controller::Command*>(hint);
                 switch (command->type()) {
