@@ -261,6 +261,11 @@ namespace TrenchBroom {
         }
 
         void EditorFrame::OnActivate(wxActivateEvent& event) {
+            // The next line needed so that wxDocManager::GetCurrentDocument()
+            // returns the correct document.
+            // Without it, undo/redo was being applied to the wrong window on OSX.
+            if (m_documentViewHolder.valid())
+                m_documentViewHolder.view().Activate(event.GetActive());
             m_mapCanvas->setHasFocus(event.GetActive(), true);
             m_mapCanvas->Refresh();
             event.Skip();
