@@ -66,8 +66,8 @@ namespace TrenchBroom {
             
             wxSizer* innerSizer = new wxBoxSizer(wxHORIZONTAL);
             innerSizer->AddSpacer(4);
-            innerSizer->Add(m_navPanel, 1, wxEXPAND | wxALIGN_CENTRE_VERTICAL);
-            innerSizer->Add(m_searchBox, 0, wxEXPAND | wxALIGN_RIGHT);
+            innerSizer->Add(m_navPanel, 1, wxEXPAND );
+            innerSizer->Add(m_searchBox, 0, wxEXPAND );
 #ifdef __APPLE__
             innerSizer->AddSpacer(4);
 #endif

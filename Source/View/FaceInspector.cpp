@@ -110,7 +110,7 @@ namespace TrenchBroom {
             wxSizer* textureViewerSizer = new wxBoxSizer(wxVERTICAL);
             textureViewerSizer->Add(m_textureViewer, 0, wxEXPAND);
             textureViewerSizer->AddSpacer(LayoutConstants::ControlVerticalMargin);
-            textureViewerSizer->Add(m_textureNameLabel, 1, wxEXPAND | wxALIGN_CENTER);
+            textureViewerSizer->Add(m_textureNameLabel, 1, wxEXPAND);
             textureViewerSizer->SetItemMinSize(m_textureViewer, 128, 128);
 
             double max = std::numeric_limits<double>::max();

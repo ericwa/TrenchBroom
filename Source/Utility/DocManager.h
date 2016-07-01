@@ -29,7 +29,7 @@ private:
     DECLARE_DYNAMIC_CLASS(DocManager)
     bool m_useSDI;
 public:
-    DocManager(long flags = wxDEFAULT_DOCMAN_FLAGS, bool initialize = true) : wxDocManager(flags, initialize), m_useSDI(false) {}
+    DocManager(long flags = 0, bool initialize = true) : wxDocManager(flags, initialize), m_useSDI(false) {}
     
     inline bool GetUseSDI() const {
         return m_useSDI;
