@@ -199,6 +199,9 @@ namespace TrenchBroom {
                 if (pitchPlus90) xform = rotationMatrix(0.0, Math::radians(90.0), 0.0) * xform;
                 if (yawPlus90) xform = rotationMatrix(0.0, 0.0, Math::radians(90.0)) * xform;
                 
+                // TODO: Add more permutations that add 45 degree (or 33.3 degree) rotations.
+                // Currently these pass on ParallelTexCoordSystem but fail on ParaxialTexCoordSystem
+                
                 checkTextureLockWithTransform(xform, origFace, verts, uvs);
             }
             
