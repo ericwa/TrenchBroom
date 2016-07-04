@@ -26,6 +26,7 @@
 #include "Model/BrushFace.h"
 #include "Model/BrushFaceAttributes.h"
 #include "Model/ParaxialTexCoordSystem.h"
+#include "Model/ParallelTexCoordSystem.h"
 #include "Assets/Texture.h"
 
 namespace TrenchBroom {
@@ -105,6 +106,173 @@ namespace TrenchBroom {
             
             EXPECT_EQ(1, texture.usageCount());
             EXPECT_EQ(0, texture2.usageCount());
+        }
+        
+        /**
+         * Applies the given transform to a copy of origFace, and also
+         * the three reference verts.
+         *
+         * Checks that the UV coordinates of the 3 transformed points
+         * are equivelant to the UV coordinates of the non-transformed points,
+         * i.e. checks that texture lock worked.
+         */
+        static void checkTextureLockWithTransform(const Mat4x4 &transform,
+                                                  const BrushFace &origFace,
+                                                  const Vec3 verts[],
+                                                  const Vec2 uvs[])
+        {
+            BrushFace *face = origFace.clone();
+            face->transform(transform, true);
+            
+#if 0
+            printf("transformed face attribs: scale %f %f, rotation %f, offset %f %f\n",
+                   face->attribs().scale().x(),
+                   face->attribs().scale().y(),
+                   face->attribs().rotation(),
+                   face->attribs().offset().x(),
+                   face->attribs().offset().y());
+#endif
+            
+            Vec3 transformedVerts[3];
+            Vec2 transformedVertUVs[3];
+            
+            for (int i=0; i<3; i++) {
+                transformedVerts[i] = transform * verts[i];
+                transformedVertUVs[i] = face->textureCoords(transformedVerts[i]);
+            }
+
+            ASSERT_TC_EQ(uvs[0], transformedVertUVs[0]);
+            
+            // note, just checking:
+            //   ASSERT_TC_EQ(uvs[1], transformedVertUVs[1]);
+            //   ASSERT_TC_EQ(uvs[2], transformedVertUVs[2]);
+            // would be too lenient.
+            ASSERT_VEC_EQ(uvs[1] - uvs[0], transformedVertUVs[1] - transformedVertUVs[0]);
+            ASSERT_VEC_EQ(uvs[2] - uvs[0], transformedVertUVs[2] - transformedVertUVs[0]);
+            delete face;
+        }
+
+        /**
+         * Given a face and three reference verts and their UVs,
+         * generates many different transformations and checks that the UVs are
+         * stable after these transformations.
+         */
+        static void checkTextureLock(const BrushFace &origFace,
+                                     const Vec3 verts[],
+                                     const Vec2 uvs[]) {
+            ASSERT_VEC_EQ(uvs[0], origFace.textureCoords(verts[0]));
+            ASSERT_VEC_EQ(uvs[1], origFace.textureCoords(verts[1]));
+            ASSERT_VEC_EQ(uvs[2], origFace.textureCoords(verts[2]));
+            
+            for (int i=0; i<(1 << 12); i++) {
+                Mat4x4 xform;
+                
+                const bool xMinus50 = (i & (1 << 0)) != 0;
+                const bool yMinus50 = (i & (1 << 1)) != 0;
+                const bool zMinus50 = (i & (1 << 2)) != 0;
+                
+                const bool xPlus100 = (i & (1 << 3)) != 0;
+                const bool yPlus100 = (i & (1 << 4)) != 0;
+                const bool zPlus100 = (i & (1 << 5)) != 0;
+                
+                const bool rollMinus180  = (i & (1 << 6)) != 0;
+                const bool pitchMinus180 = (i & (1 << 7)) != 0;
+                const bool yawMinus180   = (i & (1 << 8)) != 0;
+                
+                const bool rollPlus90    = (i & (1 << 9)) != 0;
+                const bool pitchPlus90   = (i & (1 << 10)) != 0;
+                const bool yawPlus90     = (i & (1 << 11)) != 0;
+                
+                if (xMinus50) xform = translationMatrix(Vec3(-50.0, 0.0,   0.0)) * xform;
+                if (yMinus50) xform = translationMatrix(Vec3(0.0,   -50.0, 0.0)) * xform;
+                if (zMinus50) xform = translationMatrix(Vec3(0.0,   0.0,   -50.0)) * xform;
+                
+                if (xPlus100) xform = translationMatrix(Vec3(100.0, 0.0,   0.0)) * xform;
+                if (yPlus100) xform = translationMatrix(Vec3(0.0,   100.0, 0.0)) * xform;
+                if (zPlus100) xform = translationMatrix(Vec3(0.0,   0.0,   100.0)) * xform;
+                
+                if (rollMinus180) xform = rotationMatrix(Math::radians(-180.0), 0.0, 0.0) * xform;
+                if (pitchMinus180) xform = rotationMatrix(0.0, Math::radians(-180.0), 0.0) * xform;
+                if (yawMinus180) xform = rotationMatrix(0.0, 0.0, Math::radians(-180.0))* xform;
+                
+                if (rollPlus90) xform = rotationMatrix(Math::radians(90.0), 0.0, 0.0) * xform;
+                if (pitchPlus90) xform = rotationMatrix(0.0, Math::radians(90.0), 0.0) * xform;
+                if (yawPlus90) xform = rotationMatrix(0.0, 0.0, Math::radians(90.0)) * xform;
+                
+                checkTextureLockWithTransform(xform, origFace, verts, uvs);
+            }
+            
+            // TODO: This case fails with ParaxialTexCoordSystem
+#if 0
+            Mat4x4 xform = rotationMatrix(Math::radians(45.0),
+                                          Math::radians(45.0),
+                                          Math::radians(45.0));
+            checkTextureLockWithTransform(xform, origFace, verts, uvs);
+#endif
+        }
+        
+        TEST(BrushFaceTest, testTextureLock_Paraxial) {
+            static const Vec3 textureLock_verts[3] = {
+                Vec3(0.0,  0.0, 0.0),
+                Vec3(0.0, -64.0, 0.0),
+                Vec3(64.0, 0.0, 0.0)
+            };
+            
+            static const Vec2 textureLock_uvs[3] = {
+                Vec2(0.0, 0.0),
+                Vec2(0.0, 1.0),
+                Vec2(1.0, 0.0)
+            };
+            
+            const String testTextureName("testTexture");
+            Assets::Texture texture(testTextureName, 64, 64);
+            
+            BrushFaceAttributes attribs(testTextureName);
+            attribs.setTexture(&texture);
+            
+            ParaxialTexCoordSystem *cs = new ParaxialTexCoordSystem(textureLock_verts[0],
+                                                                    textureLock_verts[1],
+                                                                    textureLock_verts[2],
+                                                                    attribs);
+            const BrushFace origFace(textureLock_verts[0],
+                                     textureLock_verts[1],
+                                     textureLock_verts[2],
+                                     attribs,
+                                     cs);
+
+            checkTextureLock(origFace, textureLock_verts, textureLock_uvs);
+        }
+        
+        TEST(BrushFaceTest, testTextureLock_Parallel) {
+            static const Vec3 textureLock_verts[3] = {
+                Vec3(0.0,  0.0, 0.0),
+                Vec3(0.0,  -64.0, 0.0),
+                Vec3(64.0, 0.0, 0.0)
+            };
+            
+            static const Vec2 textureLock_uvs[3] = {
+                Vec2(0.0, 0.0),
+                Vec2(0.0, 1.0),
+                Vec2(-1.0, 0.0) // NOTE: different than with ParaxialTexCoordSystem, is this expected?
+            };
+            
+            const String testTextureName("testTexture");
+            Assets::Texture texture(testTextureName, 64, 64);
+            
+            BrushFaceAttributes attribs(testTextureName);
+            attribs.setTexture(&texture);
+            
+            ParallelTexCoordSystem *cs = new ParallelTexCoordSystem(textureLock_verts[0],
+                                                                    textureLock_verts[1],
+                                                                    textureLock_verts[2],
+                                                                    attribs);
+            const BrushFace origFace(textureLock_verts[0],
+                                     textureLock_verts[1],
+                                     textureLock_verts[2],
+                                     attribs,
+                                     cs);
+            
+            checkTextureLock(origFace, textureLock_verts, textureLock_uvs);
         }
     }
 }
