@@ -141,14 +141,14 @@ namespace TrenchBroom {
                 transformedVertUVs[i] = face->textureCoords(transformedVerts[i]);
             }
 
-            ASSERT_TC_EQ(uvs[0], transformedVertUVs[0]);
+            EXPECT_TC_EQ(uvs[0], transformedVertUVs[0]);
             
             // note, just checking:
-            //   ASSERT_TC_EQ(uvs[1], transformedVertUVs[1]);
-            //   ASSERT_TC_EQ(uvs[2], transformedVertUVs[2]);
+            //   EXPECT_TC_EQ(uvs[1], transformedVertUVs[1]);
+            //   EXPECT_TC_EQ(uvs[2], transformedVertUVs[2]);
             // would be too lenient.
-            ASSERT_VEC_EQ(uvs[1] - uvs[0], transformedVertUVs[1] - transformedVertUVs[0]);
-            ASSERT_VEC_EQ(uvs[2] - uvs[0], transformedVertUVs[2] - transformedVertUVs[0]);
+            EXPECT_VEC_EQ(uvs[1] - uvs[0], transformedVertUVs[1] - transformedVertUVs[0]);
+            EXPECT_VEC_EQ(uvs[2] - uvs[0], transformedVertUVs[2] - transformedVertUVs[0]);
             delete face;
         }
 
@@ -157,12 +157,12 @@ namespace TrenchBroom {
          * generates many different transformations and checks that the UVs are
          * stable after these transformations.
          */
-        static void checkTextureLock(const BrushFace &origFace,
-                                     const Vec3 verts[],
-                                     const Vec2 uvs[]) {
-            ASSERT_VEC_EQ(uvs[0], origFace.textureCoords(verts[0]));
-            ASSERT_VEC_EQ(uvs[1], origFace.textureCoords(verts[1]));
-            ASSERT_VEC_EQ(uvs[2], origFace.textureCoords(verts[2]));
+        static void checkTextureLockWithTranslationAnd90DegreeRotations(const BrushFace &origFace,
+                                                                        const Vec3 verts[],
+                                                                        const Vec2 uvs[]) {
+            EXPECT_VEC_EQ(uvs[0], origFace.textureCoords(verts[0]));
+            EXPECT_VEC_EQ(uvs[1], origFace.textureCoords(verts[1]));
+            EXPECT_VEC_EQ(uvs[2], origFace.textureCoords(verts[2]));
             
             for (int i=0; i<(1 << 12); i++) {
                 Mat4x4 xform;
@@ -183,6 +183,8 @@ namespace TrenchBroom {
                 const bool pitchPlus90   = (i & (1 << 10)) != 0;
                 const bool yawPlus90     = (i & (1 << 11)) != 0;
                 
+                // translations
+                
                 if (xMinus50) xform = translationMatrix(Vec3(-50.0, 0.0,   0.0)) * xform;
                 if (yMinus50) xform = translationMatrix(Vec3(0.0,   -50.0, 0.0)) * xform;
                 if (zMinus50) xform = translationMatrix(Vec3(0.0,   0.0,   -50.0)) * xform;
@@ -191,6 +193,8 @@ namespace TrenchBroom {
                 if (yPlus100) xform = translationMatrix(Vec3(0.0,   100.0, 0.0)) * xform;
                 if (zPlus100) xform = translationMatrix(Vec3(0.0,   0.0,   100.0)) * xform;
                 
+                // -180 / -90 / 90 degree rotations
+                
                 if (rollMinus180) xform = rotationMatrix(Math::radians(-180.0), 0.0, 0.0) * xform;
                 if (pitchMinus180) xform = rotationMatrix(0.0, Math::radians(-180.0), 0.0) * xform;
                 if (yawMinus180) xform = rotationMatrix(0.0, 0.0, Math::radians(-180.0))* xform;
@@ -198,20 +202,73 @@ namespace TrenchBroom {
                 if (rollPlus90) xform = rotationMatrix(Math::radians(90.0), 0.0, 0.0) * xform;
                 if (pitchPlus90) xform = rotationMatrix(0.0, Math::radians(90.0), 0.0) * xform;
                 if (yawPlus90) xform = rotationMatrix(0.0, 0.0, Math::radians(90.0)) * xform;
+
+                checkTextureLockWithTransform(xform, origFace, verts, uvs);
+            }
+        }
+
+        /**
+         * Tests texture lock by rotating by the given amount, in each axis alone,
+         * as well as in all combinations of axes.
+         */
+        static void checkTextureLockWithMultiAxisRotations(const BrushFace &origFace,
+                                                           const Vec3 verts[],
+                                                           const Vec2 uvs[],
+                                                           double degrees) {
+            const double rotateRadians = Math::radians(degrees);
+            
+            EXPECT_VEC_EQ(uvs[0], origFace.textureCoords(verts[0]));
+            EXPECT_VEC_EQ(uvs[1], origFace.textureCoords(verts[1]));
+            EXPECT_VEC_EQ(uvs[2], origFace.textureCoords(verts[2]));
+            
+            for (int i=0; i<(1 << 3); i++) {
+                Mat4x4 xform;
                 
-                // TODO: Add more permutations that add 45 degree (or 33.3 degree) rotations.
-                // Currently these pass on ParallelTexCoordSystem but fail on ParaxialTexCoordSystem
+                const bool testRoll    = (i & (1 << 0)) != 0;
+                const bool testPitch   = (i & (1 << 1)) != 0;
+                const bool testYaw     = (i & (1 << 2)) != 0;
+                
+                if (testRoll) {
+                    xform = rotationMatrix(rotateRadians, 0.0, 0.0) * xform;
+                }
+                if (testPitch) {
+                    xform = rotationMatrix(0.0, rotateRadians, 0.0) * xform;
+                }
+                if (testYaw) {
+                    xform = rotationMatrix(0.0, 0.0, rotateRadians) * xform;
+                }
+
+                checkTextureLockWithTransform(xform, origFace, verts, uvs);
+            }
+        }
+        
+        /**
+         * Tests texture lock by rotating +/- the given amount, in one axis at a time.
+         */
+        static void checkTextureLockWithSingleAxisRotations(const BrushFace &origFace,
+                                                            const Vec3 verts[],
+                                                            const Vec2 uvs[],
+                                                            double degrees) {
+            const double rotateRadians = Math::radians(degrees);
+            
+            EXPECT_VEC_EQ(uvs[0], origFace.textureCoords(verts[0]));
+            EXPECT_VEC_EQ(uvs[1], origFace.textureCoords(verts[1]));
+            EXPECT_VEC_EQ(uvs[2], origFace.textureCoords(verts[2]));
+            
+            for (int i=0; i<6; i++) {
+                Mat4x4 xform;
+                
+                switch (i) {
+                    case 0: xform = rotationMatrix(rotateRadians, 0.0, 0.0) * xform; break;
+                    case 1: xform = rotationMatrix(-rotateRadians, 0.0, 0.0) * xform; break;
+                    case 2: xform = rotationMatrix(0.0, rotateRadians, 0.0) * xform; break;
+                    case 3: xform = rotationMatrix(0.0, -rotateRadians, 0.0) * xform; break;
+                    case 4: xform = rotationMatrix(0.0, 0.0, rotateRadians) * xform; break;
+                    case 5: xform = rotationMatrix(0.0, 0.0, -rotateRadians) * xform; break;
+                }
                 
                 checkTextureLockWithTransform(xform, origFace, verts, uvs);
             }
-            
-            // TODO: This case fails with ParaxialTexCoordSystem
-#if 0
-            Mat4x4 xform = rotationMatrix(Math::radians(45.0),
-                                          Math::radians(45.0),
-                                          Math::radians(45.0));
-            checkTextureLockWithTransform(xform, origFace, verts, uvs);
-#endif
         }
         
         TEST(BrushFaceTest, testTextureLock_Paraxial) {
@@ -243,7 +300,11 @@ namespace TrenchBroom {
                                      attribs,
                                      cs);
 
-            checkTextureLock(origFace, textureLock_verts, textureLock_uvs);
+            checkTextureLockWithTranslationAnd90DegreeRotations(origFace, textureLock_verts, textureLock_uvs);
+            checkTextureLockWithSingleAxisRotations(origFace, textureLock_verts, textureLock_uvs, 30);
+            checkTextureLockWithSingleAxisRotations(origFace, textureLock_verts, textureLock_uvs, 45);
+            
+            // checkTextureLockWithMultiAxisRotations tests are expected to fail on ParaxialTexCoordSystem
         }
         
         TEST(BrushFaceTest, testTextureLock_Parallel) {
@@ -275,7 +336,11 @@ namespace TrenchBroom {
                                      attribs,
                                      cs);
             
-            checkTextureLock(origFace, textureLock_verts, textureLock_uvs);
+            checkTextureLockWithTranslationAnd90DegreeRotations(origFace, textureLock_verts, textureLock_uvs);
+            checkTextureLockWithSingleAxisRotations(origFace, textureLock_verts, textureLock_uvs, 30);
+            checkTextureLockWithSingleAxisRotations(origFace, textureLock_verts, textureLock_uvs, 45);
+            checkTextureLockWithMultiAxisRotations(origFace, textureLock_verts, textureLock_uvs, 30);
+            checkTextureLockWithMultiAxisRotations(origFace, textureLock_verts, textureLock_uvs, 45);
         }
     }
 }
