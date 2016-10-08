@@ -208,7 +208,7 @@ namespace TrenchBroom {
         public:
             MoveVerticesCallback(BrushGeometry* geometry) :
             m_geometry(geometry) {
-                assert(m_geometry != NULL);
+                ensure(m_geometry != NULL, "no geometry");
             }
             
             ~MoveVerticesCallback() {
@@ -454,7 +454,7 @@ namespace TrenchBroom {
         }
 
         bool Brush::fullySpecified() const {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             
             BrushFaceGeometry* first = m_geometry->faces().front();
             BrushFaceGeometry* current = first;
@@ -601,27 +601,27 @@ namespace TrenchBroom {
         }
 
         size_t Brush::vertexCount() const {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             return m_geometry->vertexCount();
         }
         
         Brush::VertexList Brush::vertices() const {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             return VertexList(m_geometry->vertices());
         }
         
         bool Brush::hasVertex(const Vec3& position) const {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             return m_geometry->findVertexByPosition(position) != NULL;
         }
 
         size_t Brush::edgeCount() const {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             return m_geometry->edgeCount();
         }
         
         Brush::EdgeList Brush::edges() const {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             return EdgeList(m_geometry->edges());
         }
         
@@ -653,7 +653,7 @@ namespace TrenchBroom {
         }
 
         bool Brush::canMoveVertices(const BBox3& worldBounds, const Vec3::List& vertexPositions, const Vec3& delta) {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             assert(!vertexPositions.empty());
             if (delta.null())
                 return false;
@@ -666,7 +666,7 @@ namespace TrenchBroom {
         }
         
         Vec3::List Brush::moveVertices(const BBox3& worldBounds, const Vec3::List& vertexPositions, const Vec3& delta) {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             assert(!vertexPositions.empty());
             assert(canMoveVertices(worldBounds, vertexPositions, delta));
             
@@ -681,7 +681,7 @@ namespace TrenchBroom {
         }
         
         bool Brush::canRemoveVertices(const BBox3& worldBounds, const Vec3::List& vertexPositions) const {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             assert(!vertexPositions.empty());
             
             BrushGeometry testGeometry(*m_geometry);
@@ -700,7 +700,7 @@ namespace TrenchBroom {
         }
         
         void Brush::removeVertices(const BBox3& worldBounds, const Vec3::List& vertexPositions) {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             assert(!vertexPositions.empty());
             assert(canRemoveVertices(worldBounds, vertexPositions));
 
@@ -743,7 +743,7 @@ namespace TrenchBroom {
             }
             
             /*
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             
             const FloatType snapToF = static_cast<FloatType>(snapTo);
 
@@ -770,7 +770,7 @@ namespace TrenchBroom {
         }
 
         void Brush::snapVertices(const BBox3& worldBounds, const size_t snapTo) {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
 
             const FloatType snapToF = static_cast<FloatType>(snapTo);
             const Vec3::List vertexPositions = m_geometry->vertexPositions();
@@ -797,7 +797,7 @@ namespace TrenchBroom {
         }
 
         bool Brush::canMoveEdges(const BBox3& worldBounds, const Edge3::List& edgePositions, const Vec3& delta) {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             assert(!edgePositions.empty());
             if (delta.null())
                 return true;
@@ -822,7 +822,7 @@ namespace TrenchBroom {
         }
         
         Edge3::List Brush::moveEdges(const BBox3& worldBounds, const Edge3::List& edgePositions, const Vec3& delta) {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             assert(!edgePositions.empty());
             assert(canMoveEdges(worldBounds, edgePositions, delta));
             
@@ -849,7 +849,7 @@ namespace TrenchBroom {
         }
         
         bool Brush::canSplitEdge(const BBox3& worldBounds, const Edge3& edgePosition, const Vec3& delta) {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             if (delta.null())
                 return false;
             
@@ -861,7 +861,7 @@ namespace TrenchBroom {
         }
         
         Vec3 Brush::splitEdge(const BBox3& worldBounds, const Edge3& edgePosition, const Vec3& delta) {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             assert(canSplitEdge(worldBounds, edgePosition, delta));
             
             const NotifyNodeChange nodeChange(this);
@@ -878,7 +878,7 @@ namespace TrenchBroom {
         }
 
         bool Brush::canMoveFaces(const BBox3& worldBounds, const Polygon3::List& facePositions, const Vec3& delta) {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             assert(!facePositions.empty());
             if (delta.null())
                 return false;
@@ -904,7 +904,7 @@ namespace TrenchBroom {
         }
         
         Polygon3::List Brush::moveFaces(const BBox3& worldBounds, const Polygon3::List& facePositions, const Vec3& delta) {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             assert(!facePositions.empty());
             assert(canMoveFaces(worldBounds, facePositions, delta));
             
@@ -931,7 +931,7 @@ namespace TrenchBroom {
         }
 
         bool Brush::canSplitFace(const BBox3& worldBounds, const Polygon3& facePosition, const Vec3& delta) {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             if (delta.null())
                 return false;
             
@@ -942,7 +942,7 @@ namespace TrenchBroom {
         }
         
         Vec3 Brush::splitFace(const BBox3& worldBounds, const Polygon3& facePosition, const Vec3& delta) {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             assert(canSplitFace(worldBounds, facePosition, delta));
             
             const NotifyNodeChange nodeChange(this);
@@ -1137,7 +1137,7 @@ namespace TrenchBroom {
         }
 
         const BBox3& Brush::doGetBounds() const {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             return m_geometry->bounds();
         }
 

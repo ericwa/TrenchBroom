@@ -151,13 +151,13 @@ namespace TrenchBroom {
         }
 
         Vec3 BrushFace::center() const {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             const BrushHalfEdgeList& boundary = m_geometry->boundary();
             return Vec3::center(boundary.begin(), boundary.end(), BrushGeometry::GetVertexPosition());
         }
 
         Vec3 BrushFace::boundsCenter() const {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
 
             const Mat4x4 toPlane = planeProjectionMatrix(m_boundary.distance, m_boundary.normal);
             const Mat4x4 fromPlane = invertedMatrix(toPlane);
@@ -423,7 +423,7 @@ namespace TrenchBroom {
         }
 
         void BrushFace::updatePointsFromVertices() {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
 
             const BrushHalfEdge* first = m_geometry->boundary().front();
             const Vec3 oldNormal = m_boundary.normal;
@@ -470,22 +470,22 @@ namespace TrenchBroom {
         }
 
         size_t BrushFace::vertexCount() const {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             return m_geometry->boundary().size();
         }
 
         BrushFace::EdgeList BrushFace::edges() const {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             return EdgeList(m_geometry->boundary());
         }
 
         BrushFace::VertexList BrushFace::vertices() const {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             return VertexList(m_geometry->boundary());
         }
 
         bool BrushFace::hasVertices(const Polygon3& vertices) const {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
 
             if (vertices.vertexCount() != vertexCount())
                 return false;
@@ -503,7 +503,7 @@ namespace TrenchBroom {
         }
 
         Polygon3 BrushFace::polygon() const {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
             return Polygon3(m_geometry->vertexPositions());
         }
 
@@ -590,7 +590,7 @@ namespace TrenchBroom {
         }
 
         FloatType BrushFace::intersectWithRay(const Ray3& ray) const {
-            assert(m_geometry != NULL);
+            ensure(m_geometry != NULL, "no geometry");
 
             const FloatType dot = m_boundary.normal.dot(ray.direction);
             if (!Math::neg(dot))
