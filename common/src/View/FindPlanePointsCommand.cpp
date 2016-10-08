@@ -41,7 +41,7 @@ namespace TrenchBroom {
         }
         
         bool FindPlanePointsCommand::doPerformUndo(MapDocumentCommandFacade* document) {
-            assert(m_snapshot != NULL);
+            ensure(m_snapshot != NULL, "m_snapshot is null");
             document->restoreSnapshot(m_snapshot);
             deleteSnapshot();
             return true;

@@ -52,7 +52,7 @@ namespace TrenchBroom {
         public:
             AddFaceToGeometryCallback(BrushFace* addedFace) :
             m_addedFace(addedFace) {
-                assert(m_addedFace != NULL);
+                ensure(m_addedFace != NULL, "m_addedFace is null");
             }
             
             void faceWasCreated(BrushFaceGeometry* face) {
@@ -75,11 +75,11 @@ namespace TrenchBroom {
         public:
             void facesWillBeMerged(BrushFaceGeometry* remainingGeometry, BrushFaceGeometry* geometryToDelete) {
                 BrushFace* remainingFace = remainingGeometry->payload();
-                assert(remainingFace != NULL);
+                ensure(remainingFace != NULL, "remainingFace is null");
                 remainingFace->invalidate();
                 
                 BrushFace* faceToDelete = geometryToDelete->payload();
-                assert(faceToDelete != NULL);
+                ensure(faceToDelete != NULL, "faceToDelete is null");
                 assert(!faceToDelete->selected());
                 
                 delete faceToDelete;
@@ -88,7 +88,7 @@ namespace TrenchBroom {
 
             void faceWillBeDeleted(BrushFaceGeometry* face) {
                 BrushFace* brushFace = face->payload();
-                assert(brushFace != NULL);
+                ensure(brushFace != NULL, "brushFace is null");
                 assert(!brushFace->selected());
                 
                 delete brushFace;
@@ -140,7 +140,7 @@ namespace TrenchBroom {
             CanMoveBoundaryCallback(BrushFace* addedFace) :
             m_addedFace(addedFace),
             m_hasDroppedFaces(false) {
-                assert(m_addedFace != NULL);
+                ensure(m_addedFace != NULL, "m_addedFace is null");
             }
             
             void faceWasCreated(BrushFaceGeometry* face) {
@@ -268,7 +268,7 @@ namespace TrenchBroom {
             
             void faceWasFlipped(BrushFaceGeometry* faceGeometry) {
                 BrushFace* face = faceGeometry->payload();
-                assert(face != NULL);
+                ensure(face != NULL, "face is null");
                 face->invert();
             }
             
@@ -276,7 +276,7 @@ namespace TrenchBroom {
                 // Called when faces are split due to creating new vertices.
                 
                 BrushFace* originalFace = originalGeometry->payload();
-                assert(originalFace != NULL);
+                ensure(originalFace != NULL, "originalFace is null");
                 assert(cloneGeometry->payload() == NULL);
                 
                 BrushFace* clonedFace = originalFace->clone();
@@ -309,7 +309,7 @@ namespace TrenchBroom {
                     }
                 }
                 
-                assert(bestFace != NULL);
+                ensure(bestFace != NULL, "bestFace is null");
                 return bestFace;
             }
             
@@ -475,7 +475,7 @@ namespace TrenchBroom {
         }
 
         void Brush::addFace(BrushFace* face) {
-            assert(face != NULL);
+            ensure(face != NULL, "face is null");
             assert(face->brush() == NULL);
             assert(!VectorUtils::contains(m_faces, face));
             
@@ -491,7 +491,7 @@ namespace TrenchBroom {
         }
 
         BrushFaceList::iterator Brush::doRemoveFace(BrushFaceList::iterator begin, BrushFaceList::iterator end, BrushFace* face) {
-            assert(face != NULL);
+            ensure(face != NULL, "face is null");
 
             BrushFaceList::iterator it = std::remove(begin, end, face);
             assert(it != m_faces.end());
@@ -506,7 +506,7 @@ namespace TrenchBroom {
         }
 
         void Brush::detachFace(BrushFace* face) {
-            assert(face != NULL);
+            ensure(face != NULL, "face is null");
             assert(face->brush() == this);
 
             if (face->selected())
@@ -710,7 +710,7 @@ namespace TrenchBroom {
             for (it = vertexPositions.begin(), end = vertexPositions.end(); it != end; ++it) {
                 const Vec3& position = *it;
                 BrushVertex* vertex = m_geometry->findVertexByPosition(position);
-                assert(vertex != NULL);
+                ensure(vertex != NULL, "vertex is null");
                 
                 MoveVerticesCallback callback(m_geometry);
                 m_geometry->removeVertex(vertex, callback);

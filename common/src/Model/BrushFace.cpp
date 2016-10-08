@@ -54,7 +54,7 @@ namespace TrenchBroom {
         m_cachedVertices(0),
         m_verticesValid(false),
         m_attribs(attribs) {
-            assert(m_texCoordSystem != NULL);
+            ensure(m_texCoordSystem != NULL, "m_texCoordSystem is null");
             setPoints(point0, point1, point2);
         }
 
@@ -284,7 +284,7 @@ namespace TrenchBroom {
         }
 
         void BrushFace::updateTexture(Assets::TextureManager* textureManager) {
-            assert(textureManager != NULL);
+            ensure(textureManager != NULL, "textureManager is null");
             Assets::Texture* texture = textureManager->texture(textureName());
             setTexture(texture);
             invalidateVertexCache();

@@ -37,8 +37,8 @@ namespace TrenchBroom {
         CombineCompareHits::CombineCompareHits(CompareHits* first, CompareHits* second) :
         m_first(first),
         m_second(second) {
-            assert(m_first != NULL);
-            assert(m_second != NULL);
+            ensure(m_first != NULL, "m_first is null");
+            ensure(m_second != NULL, "m_second is null");
         }
 
         CombineCompareHits::~CombineCompareHits() {

@@ -143,7 +143,7 @@ namespace TrenchBroom {
         }
         
         bool VertexCommand::doPerformUndo(MapDocumentCommandFacade* document) {
-            assert(m_snapshot != NULL);
+            ensure(m_snapshot != NULL, "m_snapshot is null");
             document->restoreSnapshot(m_snapshot);
             deleteSnapshot();
             return true;
@@ -159,7 +159,7 @@ namespace TrenchBroom {
         }
         
         void VertexCommand::deleteSnapshot() {
-            assert(m_snapshot != NULL);
+            ensure(m_snapshot != NULL, "m_snapshot is null");
             delete m_snapshot;
             m_snapshot = NULL;
         }

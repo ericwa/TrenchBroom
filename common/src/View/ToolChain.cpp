@@ -41,7 +41,7 @@ namespace TrenchBroom {
                 m_tool = tool;
                 m_suffix = new ToolChain();
             } else {
-                assert(m_suffix != NULL);
+                ensure(m_suffix != NULL, "m_suffix is null");
                 m_suffix->append(tool);
             }
             assert(checkInvariant());

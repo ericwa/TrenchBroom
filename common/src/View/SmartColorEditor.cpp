@@ -112,11 +112,11 @@ namespace TrenchBroom {
         }
         
         void SmartColorEditor::doDestroyVisual() {
-            assert(m_panel != NULL);
-            assert(m_floatRadio != NULL);
-            assert(m_byteRadio != NULL);
-            assert(m_colorPicker != NULL);
-            assert(m_colorHistory != NULL);
+            ensure(m_panel != NULL, "m_panel is null");
+            ensure(m_floatRadio != NULL, "m_floatRadio is null");
+            ensure(m_byteRadio != NULL, "m_byteRadio is null");
+            ensure(m_colorPicker != NULL, "m_colorPicker is null");
+            ensure(m_colorHistory != NULL, "m_colorHistory is null");
             
             m_panel->Destroy();
             m_panel = NULL;
@@ -127,11 +127,11 @@ namespace TrenchBroom {
         }
         
         void SmartColorEditor::doUpdateVisual(const Model::AttributableNodeList& attributables) {
-            assert(m_panel != NULL);
-            assert(m_floatRadio != NULL);
-            assert(m_byteRadio != NULL);
-            assert(m_colorPicker != NULL);
-            assert(m_colorHistory != NULL);
+            ensure(m_panel != NULL, "m_panel is null");
+            ensure(m_floatRadio != NULL, "m_floatRadio is null");
+            ensure(m_byteRadio != NULL, "m_byteRadio is null");
+            ensure(m_colorPicker != NULL, "m_colorPicker is null");
+            ensure(m_colorHistory != NULL, "m_colorHistory is null");
             
             wxWindowUpdateLocker locker(m_panel);
             updateColorRange(attributables);

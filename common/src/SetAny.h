@@ -74,7 +74,7 @@ namespace TrenchBroom {
         m_receiver(receiver),
         m_function(function),
         m_setTo(setTo) {
-            assert(m_receiver != NULL);
+            ensure(m_receiver != NULL, "m_receiver is null");
             (m_receiver->*m_function)(m_setTo);
         }
         

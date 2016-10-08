@@ -19,6 +19,7 @@
 
 #include "Animation.h"
 #include "View/AnimationCurve.h"
+#include "Macros.h"
 
 #include <algorithm>
 #include <cassert>
@@ -86,7 +87,7 @@ namespace TrenchBroom {
         }
         
         void AnimationManager::runAnimation(Animation* animation, const bool replace) {
-            assert(animation != NULL);
+            ensure(animation != NULL, "animation is null");
             
             Animation::List& list = m_animations[animation->type()];
             if (replace)

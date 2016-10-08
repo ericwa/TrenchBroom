@@ -68,8 +68,8 @@ namespace TrenchBroom {
         HitFilterChain::HitFilterChain(const HitFilter* filter, const HitFilter* next) :
         m_filter(filter),
         m_next(next) {
-            assert(m_filter != NULL);
-            assert(m_next != NULL);
+            ensure(m_filter != NULL, "m_filter is null");
+            ensure(m_next != NULL, "m_next is null");
         }
         
         HitFilterChain::~HitFilterChain() {

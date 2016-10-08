@@ -72,7 +72,7 @@ namespace TrenchBroom {
                 }
                 
                 virtual void setup() {
-                    assert(m_block != NULL);
+                    ensure(m_block != NULL, "m_block is null");
                     VertexSpec::setup(m_block->offset());
                 }
                 
