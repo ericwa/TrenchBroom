@@ -560,7 +560,7 @@ namespace TrenchBroom {
         }
         
         void MapRenderer::nodeVisibilityDidChange(const Model::NodeList& nodes) {
-            updateRenderers(Renderer_All);
+            invalidateRenderers(Renderer_All);
         }
         
         void MapRenderer::nodeLockingDidChange(const Model::NodeList& nodes) {

@@ -110,14 +110,50 @@ namespace TrenchBroom {
             class CollectVertices;
             class CountIndices;
             class CollectIndices;
+            
+            static const size_t BatchSize = 1024;
+            
+            class BrushBatch {
+            public:
+                BrushRenderer& m_owner;
+                Model::BrushList m_brushSet;
+                VertexArray m_vertexArray;
+                FaceRenderer m_opaqueFaceRenderer;
+                FaceRenderer m_transparentFaceRenderer;
+                IndexedEdgeRenderer m_edgeRenderer;
+                bool m_valid;
+                
+                BrushBatch(BrushRenderer& owner) :
+                m_owner(owner),
+                m_brushSet(),
+                m_vertexArray(),
+                m_opaqueFaceRenderer(),
+                m_transparentFaceRenderer(),
+                m_edgeRenderer(),
+                m_valid(true) {}
+            public:
+                void addBrushes(const Model::BrushList& brushes);
+                void removeBrushes(const Model::BrushList& brushes);
+                void clear();
+                size_t brushCount() const;
+
+                void invalidate();
+                
+            public: // rendering
+                void renderOpaque(RenderContext& renderContext, RenderBatch& renderBatch);
+                void renderTransparent(RenderContext& renderContext, RenderBatch& renderBatch);
+
+            private:
+                void renderOpaqueFaces(RenderBatch& renderBatch);
+                void renderTransparentFaces(RenderBatch& renderBatch);
+                void renderEdges(RenderBatch& renderBatch);
+                
+                void validate();
+                void validateVertices();
+                void validateIndices();
+            };
         private:
             Filter* m_filter;
-            Model::BrushList m_brushes;
-            VertexArray m_vertexArray;
-            FaceRenderer m_opaqueFaceRenderer;
-            FaceRenderer m_transparentFaceRenderer;
-            IndexedEdgeRenderer m_edgeRenderer;
-            bool m_valid;
             
             Color m_faceColor;
             bool m_showEdges;
@@ -130,22 +166,31 @@ namespace TrenchBroom {
             float m_transparencyAlpha;
             
             bool m_showHiddenBrushes;
+            
+            std::vector<BrushBatch> m_batches;
+            std::map<Model::Brush*, size_t> m_batchIndexForBrush;
         public:
             template <typename FilterT>
             BrushRenderer(const FilterT& filter) :
             m_filter(new FilterT(filter)),
-            m_valid(true),
             m_showEdges(false),
             m_grayscale(false),
             m_tint(false),
             m_showOccludedEdges(false),
             m_transparencyAlpha(1.0f),
-            m_showHiddenBrushes(false) {}
+            m_showHiddenBrushes(false),
+            m_batches(),
+            m_batchIndexForBrush() {}
             
             BrushRenderer(bool transparent);
             
             ~BrushRenderer();
 
+        private:
+            void addBrushToBatch(size_t batchIndex, Model::Brush* brush);
+            void removeBrush(Model::Brush* brush);
+            void removeBrushes(const Model::BrushList& brushes);
+        public:
             void addBrushes(const Model::BrushList& brushes);
             void setBrushes(const Model::BrushList& brushes);
             void clear();
@@ -166,14 +211,7 @@ namespace TrenchBroom {
             void render(RenderContext& renderContext, RenderBatch& renderBatch);
             void renderOpaque(RenderContext& renderContext, RenderBatch& renderBatch);
             void renderTransparent(RenderContext& renderContext, RenderBatch& renderBatch);
-        private:
-            void renderOpaqueFaces(RenderBatch& renderBatch);
-            void renderTransparentFaces(RenderBatch& renderBatch);
-            void renderEdges(RenderBatch& renderBatch);
-            
-            void validate();
-            void validateVertices();
-            void validateIndices();
+
         private:
             BrushRenderer(const BrushRenderer& other);
             BrushRenderer& operator=(const BrushRenderer& other);

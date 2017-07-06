@@ -123,42 +123,139 @@ namespace TrenchBroom {
 
         BrushRenderer::BrushRenderer(const bool transparent) :
         m_filter(new NoFilter(transparent)),
-        m_valid(true),
         m_showEdges(false),
         m_grayscale(false),
         m_tint(false),
         m_showOccludedEdges(false),
         m_transparencyAlpha(1.0f),
-        m_showHiddenBrushes(false) {}
+        m_showHiddenBrushes(false),
+        m_batches() {}
         
         BrushRenderer::~BrushRenderer() {
             delete m_filter;
             m_filter = NULL;
         }
 
-        void BrushRenderer::addBrushes(const Model::BrushList& brushes) {
-            VectorUtils::append(m_brushes, brushes);
+        void BrushRenderer::BrushBatch::addBrushes(const Model::BrushList& brushes) {
+            Model::BrushList toAddSet(brushes);
+            VectorUtils::setCreate(toAddSet);
+            m_brushSet = VectorUtils::setUnion(m_brushSet, toAddSet);
             invalidate();
         }
 
-        void BrushRenderer::setBrushes(const Model::BrushList& brushes) {
-            m_brushes = brushes;
+        void BrushRenderer::BrushBatch::removeBrushes(const Model::BrushList& brushes) {
+            Model::BrushList toRemoveSet(brushes);
+            VectorUtils::setCreate(toRemoveSet);
+            m_brushSet = VectorUtils::setMinus(m_brushSet, toRemoveSet);
             invalidate();
         }
 
-        void BrushRenderer::invalidate() {
+        void BrushRenderer::BrushBatch::invalidate() {
             m_vertexArray = VertexArray();
             m_valid = false;
         }
         
-        void BrushRenderer::clear() {
-            m_brushes.clear();
+        void BrushRenderer::BrushBatch::clear() {
+            m_brushSet.clear();
             m_transparentFaceRenderer = FaceRenderer();
             m_opaqueFaceRenderer = FaceRenderer();
             m_vertexArray = VertexArray();
             m_valid = true;
         }
+        
+        size_t BrushRenderer::BrushBatch::brushCount() const {
+            return m_brushSet.size();
+        }
 
+        void BrushRenderer::addBrushToBatch(const size_t batchIndex, Model::Brush* brush) {
+            m_batchIndexForBrush[brush] = batchIndex;
+            m_batches.at(batchIndex).addBrushes(Model::BrushList{brush});
+        }
+        
+        void BrushRenderer::removeBrush(Model::Brush* brush) {
+            const size_t batchIndex = m_batchIndexForBrush.at(brush);
+            BrushBatch& batch = m_batches.at(batchIndex);
+            
+            batch.removeBrushes(Model::BrushList{brush});
+            m_batchIndexForBrush.erase(brush);
+        }
+        
+        void BrushRenderer::removeBrushes(const Model::BrushList& brushes) {
+            for (const auto &brush : brushes) {
+                removeBrush(brush);
+            }
+        }
+        
+        void BrushRenderer::addBrushes(const Model::BrushList& brushes) {
+            if (brushes.empty())
+                return;
+            
+            Model::BrushList toAdd(brushes);
+            
+            // ensure there is always at least 1 batch
+            if (m_batches.empty()) {
+                m_batches.push_back(BrushBatch(*this));
+            }
+            
+            for (size_t i=0; i<m_batches.size(); i++) {
+                BrushBatch& batch = m_batches[i];
+                
+                while (batch.brushCount() < BatchSize) {
+                    if (toAdd.empty())
+                        return;
+                    
+                    Model::Brush* brush = toAdd.back();
+                    toAdd.pop_back();
+                    addBrushToBatch(i, brush);
+                }
+                
+                // push a new renderer if needed
+                if (i == (m_batches.size() - 1) && !toAdd.empty()) {
+                    m_batches.push_back(BrushBatch(*this));
+                }
+            }
+            
+            ensure(toAdd.empty(), "didn't add all brushes");
+        }
+        
+        void BrushRenderer::setBrushes(const Model::BrushList& brushes) {
+            Model::BrushList toAdd;
+            toAdd.reserve(brushes.size());
+            
+            // start with removing everything
+            std::map<Model::Brush*, size_t> toRemoveMap = m_batchIndexForBrush;
+            
+            for (Model::Brush* brush : brushes) {
+                auto it = toRemoveMap.find(brush);
+                if (it != toRemoveMap.end()) {
+                    toRemoveMap.erase(it);
+                } else {
+                    toAdd.push_back(brush);
+                }
+            }
+            
+            // move toRemoveMap to a std::vector
+            Model::BrushList toRemove;
+            toRemove.reserve(toRemoveMap.size());
+            for (const auto& pair : toRemoveMap) {
+                toRemove.push_back(pair.first);
+            }
+            
+            addBrushes(toAdd);
+            removeBrushes(toRemove);
+        }
+        
+        void BrushRenderer::invalidate() {
+            for (auto& batch : m_batches) {
+                batch.invalidate();
+            }
+        }
+        
+        void BrushRenderer::clear() {
+            m_batches.clear();
+            m_batchIndexForBrush.clear();
+        }
+        
         void BrushRenderer::setFaceColor(const Color& faceColor) {
             m_faceColor = faceColor;
         }
@@ -208,18 +305,30 @@ namespace TrenchBroom {
         }
         
         void BrushRenderer::renderOpaque(RenderContext& renderContext, RenderBatch& renderBatch) {
-            if (!m_brushes.empty()) {
-                if (!m_valid)
-                    validate();
-                if (renderContext.showFaces())
-                    renderOpaqueFaces(renderBatch);
-                if (renderContext.showEdges() || m_showEdges)
-                    renderEdges(renderBatch);
+            for (auto& batch : m_batches) {
+                batch.renderOpaque(renderContext, renderBatch);
             }
         }
         
         void BrushRenderer::renderTransparent(RenderContext& renderContext, RenderBatch& renderBatch) {
-            if (!m_brushes.empty()) {
+            for (auto& batch : m_batches) {
+                batch.renderTransparent(renderContext, renderBatch);
+            }
+        }
+        
+        void BrushRenderer::BrushBatch::renderOpaque(RenderContext& renderContext, RenderBatch& renderBatch) {
+            if (!m_brushSet.empty()) {
+                if (!m_valid)
+                    validate();
+                if (renderContext.showFaces())
+                    renderOpaqueFaces(renderBatch);
+                if (renderContext.showEdges() || m_owner.m_showEdges)
+                    renderEdges(renderBatch);
+            }
+        }
+        
+        void BrushRenderer::BrushBatch::renderTransparent(RenderContext& renderContext, RenderBatch& renderBatch) {
+            if (!m_brushSet.empty()) {
                 if (!m_valid)
                     validate();
                 if (renderContext.showFaces())
@@ -227,25 +336,25 @@ namespace TrenchBroom {
             }
         }
 
-        void BrushRenderer::renderOpaqueFaces(RenderBatch& renderBatch) {
-            m_opaqueFaceRenderer.setGrayscale(m_grayscale);
-            m_opaqueFaceRenderer.setTint(m_tint);
-            m_opaqueFaceRenderer.setTintColor(m_tintColor);
+        void BrushRenderer::BrushBatch::renderOpaqueFaces(RenderBatch& renderBatch) {
+            m_opaqueFaceRenderer.setGrayscale(m_owner.m_grayscale);
+            m_opaqueFaceRenderer.setTint(m_owner.m_tint);
+            m_opaqueFaceRenderer.setTintColor(m_owner.m_tintColor);
             m_opaqueFaceRenderer.render(renderBatch);
         }
         
-        void BrushRenderer::renderTransparentFaces(RenderBatch& renderBatch) {
-            m_transparentFaceRenderer.setGrayscale(m_grayscale);
-            m_transparentFaceRenderer.setTint(m_tint);
-            m_transparentFaceRenderer.setTintColor(m_tintColor);
-            m_transparentFaceRenderer.setAlpha(m_transparencyAlpha);
+        void BrushRenderer::BrushBatch::renderTransparentFaces(RenderBatch& renderBatch) {
+            m_transparentFaceRenderer.setGrayscale(m_owner.m_grayscale);
+            m_transparentFaceRenderer.setTint(m_owner.m_tint);
+            m_transparentFaceRenderer.setTintColor(m_owner.m_tintColor);
+            m_transparentFaceRenderer.setAlpha(m_owner.m_transparencyAlpha);
             m_transparentFaceRenderer.render(renderBatch);
         }
         
-        void BrushRenderer::renderEdges(RenderBatch& renderBatch) {
-            if (m_showOccludedEdges)
-                m_edgeRenderer.renderOnTop(renderBatch, m_occludedEdgeColor);
-            m_edgeRenderer.render(renderBatch, m_edgeColor);
+        void BrushRenderer::BrushBatch::renderEdges(RenderBatch& renderBatch) {
+            if (m_owner.m_showOccludedEdges)
+                m_edgeRenderer.renderOnTop(renderBatch, m_owner.m_occludedEdgeColor);
+            m_edgeRenderer.render(renderBatch, m_owner.m_edgeColor);
         }
 
         class BrushRenderer::FilterWrapper : public BrushRenderer::Filter {
@@ -450,31 +559,31 @@ namespace TrenchBroom {
             }
         };
         
-        void BrushRenderer::validate() {
-            assert(!m_valid);
+        void BrushRenderer::BrushBatch::validate() {
+            ensure(!m_valid, "renderer was already valid");
             validateVertices();
             validateIndices();
             m_valid = true;
         }
         
-        void BrushRenderer::validateVertices() {
-            const FilterWrapper wrapper(*m_filter, m_showHiddenBrushes);
+        void BrushRenderer::BrushBatch::validateVertices() {
+            const FilterWrapper wrapper(*m_owner.m_filter, m_owner.m_showHiddenBrushes);
             CountVertices countVertices(wrapper);
-            Model::Node::accept(std::begin(m_brushes), std::end(m_brushes), countVertices);
+            Model::Node::accept(std::begin(m_brushSet), std::end(m_brushSet), countVertices);
             
             CollectVertices collectVertices(wrapper, countVertices.vertexCount());
-            Model::Node::accept(std::begin(m_brushes), std::end(m_brushes), collectVertices);
+            Model::Node::accept(std::begin(m_brushSet), std::end(m_brushSet), collectVertices);
             
             m_vertexArray = collectVertices.vertexArray();
         }
         
-        void BrushRenderer::validateIndices() {
-            const FilterWrapper wrapper(*m_filter, m_showHiddenBrushes);
+        void BrushRenderer::BrushBatch::validateIndices() {
+            const FilterWrapper wrapper(*m_owner.m_filter, m_owner.m_showHiddenBrushes);
             CountIndices countIndices(wrapper);
-            Model::Node::accept(std::begin(m_brushes), std::end(m_brushes), countIndices);
+            Model::Node::accept(std::begin(m_brushSet), std::end(m_brushSet), countIndices);
             
             CollectIndices collectIndices(wrapper, countIndices);
-            Model::Node::accept(std::begin(m_brushes), std::end(m_brushes), collectIndices);
+            Model::Node::accept(std::begin(m_brushSet), std::end(m_brushSet), collectIndices);
             
             const IndexArray opaqueIndices = IndexArray::swap(collectIndices.opaqueFaceIndices().indices());
             const TexturedIndexArrayMap& opaqueRanges = collectIndices.opaqueFaceIndices().ranges();
@@ -482,8 +591,8 @@ namespace TrenchBroom {
             const IndexArray transparentIndices = IndexArray::swap(collectIndices.transparentFaceIndices().indices());
             const TexturedIndexArrayMap& transparentRanges = collectIndices.transparentFaceIndices().ranges();
             
-            m_opaqueFaceRenderer = FaceRenderer(m_vertexArray, opaqueIndices, opaqueRanges, m_faceColor);
-            m_transparentFaceRenderer = FaceRenderer(m_vertexArray, transparentIndices, transparentRanges, m_faceColor);
+            m_opaqueFaceRenderer = FaceRenderer(m_vertexArray, opaqueIndices, opaqueRanges, m_owner.m_faceColor);
+            m_transparentFaceRenderer = FaceRenderer(m_vertexArray, transparentIndices, transparentRanges, m_owner.m_faceColor);
             
             const IndexArray edgeIndices = IndexArray::swap(collectIndices.edgeIndices().indices());
             const IndexArrayMap& edgeRanges = collectIndices.edgeIndices().ranges();
