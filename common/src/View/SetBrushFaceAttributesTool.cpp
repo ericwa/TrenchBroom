@@ -61,21 +61,60 @@ namespace TrenchBroom {
             Model::BrushFace* source = selectedFaces.front();
             Model::BrushFace* targetFace = Model::hitToFace(hit);
             Model::Brush* targetBrush = targetFace->brush();
-            const Model::BrushFaceList targetList = applyToBrush ? targetBrush->faces() : Model::BrushFaceList(1, targetFace);
             
             const Model::WrapStyle wrapStyle = inputState.modifierKeysDown(ModifierKeys::MKShift) ? Model::WrapStyle::Rotation : Model::WrapStyle::Projection;
             
             const Transaction transaction(document);
-            document->deselectAll();
-            document->select(targetList);
             if (copyAttributes(inputState)) {
-                Model::TexCoordSystemSnapshot* snapshot = source->takeTexCoordSystemSnapshot();
-                document->setFaceAttributes(source->attribs());
-                if (snapshot != nullptr) {
-                    document->copyTexCoordSystemFromFace(snapshot, source->attribs().takeSnapshot(), source->boundary(), wrapStyle);
-                    delete snapshot;
+                if (applyToBrush) {
+                    const auto pillarFaces = targetBrush->facesAroundPillar(source, targetFace);
+                    const auto otherFaces = SetUtils::minus(SetUtils::makeSet(targetBrush->faces()), SetUtils::makeSet(pillarFaces));
+                    
+                    {
+                        const Model::BrushFace *last = source;
+                        for (const auto face : pillarFaces) {
+                            // copy from "last" to "face"
+                            document->deselectAll();
+                            document->select(Model::BrushFaceList{face});
+                            
+                            Model::TexCoordSystemSnapshot* snapshot = last->takeTexCoordSystemSnapshot();
+                            document->setFaceAttributes(last->attribs());
+                            if (snapshot != nullptr) {
+                                document->copyTexCoordSystemFromFace(snapshot, last->attribs().takeSnapshot(), last->boundary(), wrapStyle);
+                                delete snapshot;
+                            }
+                            
+                            last = face;
+                        }
+                    }
+                    
+                    // for the other faces, copy from "source" to "face"
+                    for (const auto face : otherFaces) {
+                        document->deselectAll();
+                        document->select(Model::BrushFaceList{face});
+                        
+                        Model::TexCoordSystemSnapshot* snapshot = source->takeTexCoordSystemSnapshot();
+                        document->setFaceAttributes(source->attribs());
+                        if (snapshot != nullptr) {
+                            document->copyTexCoordSystemFromFace(snapshot, source->attribs().takeSnapshot(), source->boundary(), wrapStyle);
+                            delete snapshot;
+                        }
+                    }
+                } else {
+                    document->deselectAll();
+                    document->select(Model::BrushFaceList{targetFace});
+                    
+                    Model::TexCoordSystemSnapshot* snapshot = source->takeTexCoordSystemSnapshot();
+                    document->setFaceAttributes(source->attribs());
+                    if (snapshot != nullptr) {
+                        document->copyTexCoordSystemFromFace(snapshot, source->attribs().takeSnapshot(), source->boundary(), wrapStyle);
+                        delete snapshot;
+                    }
                 }
             } else {
+                const Model::BrushFaceList targetList = applyToBrush ? targetBrush->faces() : Model::BrushFaceList(1, targetFace);
+                document->deselectAll();
+                document->select(targetList);
                 document->setTexture(source->texture());
             }
             document->deselectAll();
