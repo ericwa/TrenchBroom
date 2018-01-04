@@ -154,7 +154,8 @@ namespace TrenchBroom {
             bool containsPoint(const Vec3& point) const;
             
             BrushFaceList incidentFaces(const BrushVertex* vertex) const;
-            
+            BrushFaceList facesAroundPillar(const BrushFace* first, const BrushFace* second) const;
+
             // vertex operations
             bool canMoveVertices(const BBox3& worldBounds, const Vec3::List& vertices, const Vec3& delta) const;
             Vec3::List moveVertices(const BBox3& worldBounds, const Vec3::List& vertexPositions, const Vec3& delta);

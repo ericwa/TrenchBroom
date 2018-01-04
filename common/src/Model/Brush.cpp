@@ -724,6 +724,58 @@ namespace TrenchBroom {
             return result;
         }
 
+        /**
+         * If "first" and "second" are two adjacent faces of a pillar,
+         * tries to return a list of the sides of the pillar in order,
+         * starting with "first" and "second".
+         */
+        BrushFaceList Brush::facesAroundPillar(const BrushFace* first, const BrushFace* second) const {
+            BrushFaceSet visitedSet { const_cast<BrushFace*>(first) };
+            BrushFaceList result { const_cast<BrushFace*>(first) };
+            
+            BrushFace* previous = const_cast<BrushFace*>(first);
+            Vec3 previousSweepAxis = crossed(first->boundary().normal,
+                                             second->boundary().normal).normalized();
+            
+            if (previousSweepAxis.nan())
+                return {};
+            
+            while (1) {
+                // try each neighbour of "previous"
+                BrushFace* next = nullptr;
+                double maxCosAngle = -1.0;
+                for (const auto edge : previous->edges()) {
+                    BrushFace* possible = edge->firstFace()->payload() == previous
+                    ? edge->secondFace()->payload()
+                    : edge->firstFace()->payload();
+                    const Vec3 possibleSweepAxis = crossed(previous->boundary().normal,
+                                                           possible->boundary().normal).normalized();
+                    if (possible == previous)
+                        continue;
+                    if (possibleSweepAxis.nan())
+                        continue;
+                    
+                    const double possibleCosAngle = possibleSweepAxis.dot(previousSweepAxis);
+                    if (possibleCosAngle > maxCosAngle) {
+                        maxCosAngle = possibleCosAngle;
+                        next = possible;
+                    }
+                }
+                
+                if (next == nullptr)
+                    return result;
+                if (visitedSet.find(next) != visitedSet.end())
+                    return result;
+                
+                // go to "next"
+                visitedSet.insert(next);
+                result.push_back(next);
+                previousSweepAxis = crossed(previous->boundary().normal,
+                                            next->boundary().normal).normalized();
+                previous = next;
+            }
+        }
+        
         bool Brush::canMoveVertices(const BBox3& worldBounds, const Vec3::List& vertices, const Vec3& delta) const {
             return doCanMoveVertices(worldBounds, vertices, delta, true).success;
         }

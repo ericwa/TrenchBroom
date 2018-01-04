@@ -3346,5 +3346,27 @@ namespace TrenchBroom {
             ASSERT_TRUE(pipe->intersects(cube));
             ASSERT_TRUE(cube->intersects(pipe));
         }
+        
+        TEST(BrushTest, facesAroundPillar) {
+            const BBox3 worldBounds(8192.0);
+            World world(MapFormat::Standard, nullptr, worldBounds);
+            const BrushBuilder builder(&world, worldBounds);
+            
+            Model::Brush *brush1 = builder.createCube(128.0, "texture");
+            
+            Model::BrushFace *face1 = brush1->findFace(Vec3::PosX);
+            Model::BrushFace *face2 = brush1->findFace(Vec3::PosY);
+            Model::BrushFace *face3 = brush1->findFace(Vec3::NegX);
+            Model::BrushFace *face4 = brush1->findFace(Vec3::NegY);
+            
+            ASSERT_NE(nullptr, face1);
+            ASSERT_NE(nullptr, face2);
+            ASSERT_NE(nullptr, face3);
+            ASSERT_NE(nullptr, face4);
+            
+            ASSERT_EQ((Model::BrushFaceList{face1, face2, face3, face4}), brush1->facesAroundPillar(face1, face2));
+            ASSERT_EQ((Model::BrushFaceList{face1, face4, face3, face2}), brush1->facesAroundPillar(face1, face4));
+            ASSERT_EQ(Model::BrushFaceList{}, brush1->facesAroundPillar(face1, face3));
+        }
     }
 }
